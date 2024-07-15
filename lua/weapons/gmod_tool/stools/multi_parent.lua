@@ -4,10 +4,10 @@ TOOL.Command		= nil
 TOOL.ConfigName		= ""
 
 if CLIENT then
-    language.Add( "tool.multi_parent.name", "Multi-Parent Tool" )
-    language.Add( "tool.multi_parent.listname", "Multi-Parent" )
-    language.Add( "tool.multi_parent.desc", "Parent multiple props to one prop." )
-    language.Add( "tool.multi_parent.0", "Primary: Select a prop. (Shift to select all, Use to area select) Secondary: Parent all selected entities to prop. Reload: Clear Targets." )
+	language.Add( "tool.multi_parent.name", "Multi-Parent Tool" )
+	language.Add( "tool.multi_parent.listname", "Multi-Parent" )
+	language.Add( "tool.multi_parent.desc", "Parent multiple props to one prop." )
+	language.Add( "tool.multi_parent.0", "Primary: Select a prop. (Shift to select all, Use to area select) Secondary: Parent all selected entities to prop. Reload: Clear Targets." )
 	language.Add( "tool.multi_parent.removeconstraints", "Remove Constraints" )
 	language.Add( "tool.multi_parent.nocollide", "No Collide" )
 	language.Add( "tool.multi_parent.weld", "Weld" )
@@ -33,38 +33,38 @@ TOOL.ClientConVar[ "disableshadow" ] = "0"
 
 function TOOL.BuildCPanel( panel )
 	panel:AddControl("Slider", {
-		Label = "Auto Select Radius:", 
-		Type = "integer", 
-		Min = "64", 
-		Max = "1024", 
+		Label = "Auto Select Radius:",
+		Type = "integer",
+		Min = "64",
+		Max = "1024",
 		Command = "multi_parent_radius"
 	} )
-	panel:AddControl( "Checkbox", { 
+	panel:AddControl( "Checkbox", {
 		Label = "#tool.multi_parent.removeconstraints",
 		Command = "multi_parent_removeconstraints",
 		Help = true
 	} )
-	panel:AddControl( "Checkbox", { 
+	panel:AddControl( "Checkbox", {
 		Label = "#tool.multi_parent.nocollide",
 		Command = "multi_parent_nocollide",
 		Help = true
 	} )
-	panel:AddControl( "Checkbox", { 
+	panel:AddControl( "Checkbox", {
 		Label = "#tool.multi_parent.weld",
 		Command = "multi_parent_weld",
 		Help = true
 	} )
-	panel:AddControl( "Checkbox", { 
+	panel:AddControl( "Checkbox", {
 		Label = "#tool.multi_parent.disablecollisions",
 		Command = "multi_parent_disablecollisions",
 		Help = true
 	} )
-	panel:AddControl( "Checkbox", { 
+	panel:AddControl( "Checkbox", {
 		Label = "#tool.multi_parent.weight",
 		Command = "multi_parent_weight",
 		Help = true
 	} )
-	panel:AddControl( "Checkbox", { 
+	panel:AddControl( "Checkbox", {
 		Label = "#tool.multi_parent.disableshadow",
 		Command = "multi_parent_disableshadow",
 		Help = true
@@ -78,7 +78,7 @@ function TOOL:IsPropOwner( ply, ent )
 		return ent:CPPIGetOwner() == ply
 	else
 		for k, v in pairs( g_SBoxObjects ) do
-			for b, j in pairs( v ) do
+			for _, j in pairs( v ) do
 				for _, e in pairs( j ) do
 					if e == ent and k == ply:UniqueID() then return true end
 				end
@@ -127,40 +127,40 @@ function TOOL:LeftClick( trace )
 	if CLIENT then return true end
 	if trace.Entity:IsValid() and trace.Entity:IsPlayer() then return end
 	if SERVER and not util.IsValidPhysicsObject( trace.Entity, trace.PhysicsBone ) then return false end
-	
+
 	local ply = self:GetOwner()
-	
+
 	if (not ply:KeyDown( IN_USE )) and trace.Entity:IsWorld() then return false end
-	
+
 	local ent = trace.Entity
-	
+
 	if ply:KeyDown( IN_USE ) then -- Area select function
 		local SelectedProps = 0
 		local Radius = math.Clamp( self:GetClientNumber( "radius" ), 64, 1024 )
-		
-		for k, v in pairs( ents.FindInSphere( trace.HitPos, Radius ) ) do
+
+		for _, v in ipairs( ents.FindInSphere( trace.HitPos, Radius ) ) do
 			if v:IsValid() and not self:IsSelected( v ) and self:IsPropOwner( ply, v ) then
 				self:Select( v )
 				SelectedProps = SelectedProps + 1
 			end
 		end
-		
+
 		ply:PrintMessage( HUD_PRINTTALK, "Multi-Parent: " .. SelectedProps .. " props were selected." )
 	elseif ply:KeyDown( IN_SPEED ) then -- Select all constrained entities
 		local SelectedProps = 0
-		
-		for k, v in pairs( constraint.GetAllConstrainedEntities( ent ) ) do
+
+		for _, v in pairs( constraint.GetAllConstrainedEntities( ent ) ) do
 			self:Select( v )
 			SelectedProps = SelectedProps + 1
 		end
-		
+
 		ply:PrintMessage( HUD_PRINTTALK, "Multi-Parent: " .. SelectedProps .. " props were selected." )
 	elseif self:IsSelected( ent ) then -- Ent is already selected, deselect it
 		self:Deselect( ent )
 	else -- Select single entity
 		self:Select( ent )
 	end
-	
+
 	return true
 end
 
@@ -170,16 +170,16 @@ function TOOL:RightClick( trace )
 	if trace.Entity:IsValid() and trace.Entity:IsPlayer() then return end
 	if SERVER and not util.IsValidPhysicsObject( trace.Entity, trace.PhysicsBone ) then return false end
 	if trace.Entity:IsWorld() then return false end
-	
+
 	local _nocollide = tobool( self:GetClientNumber( "nocollide" ) )
 	local _disablecollisions = tobool( self:GetClientNumber( "disablecollisions" ) )
 	local _weld = tobool( self:GetClientNumber( "weld" ) )
 	local _removeconstraints = tobool( self:GetClientNumber( "removeconstraints" ) )
 	local _weight = tobool( self:GetClientNumber( "weight" ) )
 	local _disableshadow = tobool( self:GetClientNumber( "disableshadow" ) )
-	
+
 	local ent = trace.Entity
-	
+
 	local undo_tbl = {}
 
 	undo.Create( "Multi-Parent" )
@@ -189,44 +189,44 @@ function TOOL:RightClick( trace )
 			local phys = prop:GetPhysicsObject()
 			if IsValid( phys ) then
 				local data = {}
-				
+
 				if _removeconstraints then
 					constraint.RemoveAll( prop )
 				end
-				
+
 				if _nocollide then
 					undo.AddEntity( constraint.NoCollide( prop, ent, 0, 0 ) )
 				end
-				
+
 				if _disablecollisions then
 					data.ColGroup = prop:GetCollisionGroup()
 					prop:SetCollisionGroup( COLLISION_GROUP_WORLD )
 				end
-				
+
 				if _weld then
 					undo.AddEntity( constraint.Weld( prop, ent, 0, 0 ) )
 				end
-				
+
 				if _weight then
 					data.Mass = phys:GetMass()
 					phys:SetMass( 0.1 )
 					duplicator.StoreEntityModifier( prop, "mass", { Mass = 0.1 } )
 				end
-				
+
 				if _disableshadow then
 					data.DisabledShadow = true
 					prop:DrawShadow( false )
 				end
-				
+
 				-- Unfreeze and sleep the physobj
 				phys:EnableMotion( true )
 				phys:Sleep()
-				
+
 				-- Restore original color and parent
 				prop:SetColor( v )
 				prop:SetParent( ent )
 				self.enttbl[k] = nil
-				
+
 				-- Undo shit
 				undo_tbl[prop] = data
 			end
@@ -236,9 +236,9 @@ function TOOL:RightClick( trace )
 			self.enttbl[k] = nil
 		end
 	end
-	
+
 	-- Unparenting function for undo
-	undo.AddFunction( function( tab, undo_tbl )
+	undo.AddFunction( function( _, undo_tbl )
 		for prop, data in pairs( undo_tbl ) do
 			if IsValid( prop ) then
 				local phys = prop:GetPhysicsObject()
@@ -248,17 +248,17 @@ function TOOL:RightClick( trace )
 					local ang = prop:GetAngles()
 					local mat = prop:GetMaterial()
 					local col = prop:GetColor()
-					
+
 					-- Unparent
 					phys:EnableMotion( false )
 					prop:SetParent( nil )
-					
+
 					-- Restore values
 					prop:SetColor( col )
 					prop:SetMaterial( mat )
 					prop:SetAngles( ang )
 					prop:SetPos( pos )
-					
+
 					if data.Mass then
 						phys:SetMass( data.Mass )
 					end
@@ -268,14 +268,14 @@ function TOOL:RightClick( trace )
 					if data.DisabledShadow then
 						prop:DrawShadow( true )
 					end
-						
+
 				end
 			end
 		end
 	end, undo_tbl )
 	undo.SetPlayer( self:GetOwner() )
 	undo.Finish()
-	
+
 	self.enttbl = {}
 	return true
 end
@@ -283,7 +283,7 @@ end
 function TOOL:Reload()
 	if CLIENT then return false end
 	if table.Count( self.enttbl ) < 1 then return end
-	
+
 	for k,v in pairs( self.enttbl ) do
 		local prop = ents.GetByIndex( k )
 		if prop:IsValid() then
