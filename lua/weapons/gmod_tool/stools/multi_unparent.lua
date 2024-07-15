@@ -2,6 +2,11 @@ TOOL.Category		= "Constraints"
 TOOL.Name			= "#tool.multi_unparent.listname"
 TOOL.Command		= nil
 TOOL.ConfigName		= ""
+TOOL.Information	= {
+	{ name = "left" },
+	{ name = "right" },
+	{ name = "reload" },
+}
 
 local plytbl = {}
 
@@ -9,7 +14,9 @@ if CLIENT then
 	language.Add( "tool.multi_unparent.name", "Multi-Unparent Tool" )
 	language.Add( "tool.multi_unparent.listname", "Multi-Unparent" )
 	language.Add( "tool.multi_unparent.desc", "Unparents multiple props." )
-	language.Add( "tool.multi_unparent.0", "Primary: Select a prop. Secondary: Unparent all selected entities. Reload: Clear Targets." )
+	language.Add( "tool.multi_unparent.left", "Select a prop" )
+	language.Add( "tool.multi_unparent.right", "Unparent all selected entities" )
+	language.Add( "tool.multi_unparent.reload", "Clear targets" )
 
 	local function Select() -- runs a trace on the client rather than the server so that it will reliably hit parented entities
 		local tr = util.TraceLine( util.GetPlayerTrace(LocalPlayer()) )
