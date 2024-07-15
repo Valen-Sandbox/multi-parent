@@ -2,12 +2,19 @@ TOOL.Category		= "Constraints"
 TOOL.Name			= "#tool.multi_parent.listname"
 TOOL.Command		= nil
 TOOL.ConfigName		= ""
+TOOL.Information	= {
+	{ name = "left" },
+	{ name = "right" },
+	{ name = "reload" },
+}
 
 if CLIENT then
 	language.Add( "tool.multi_parent.name", "Multi-Parent Tool" )
 	language.Add( "tool.multi_parent.listname", "Multi-Parent" )
 	language.Add( "tool.multi_parent.desc", "Parent multiple props to one prop." )
-	language.Add( "tool.multi_parent.0", "Primary: Select a prop. (Shift to select all, Use to area select) Secondary: Parent all selected entities to prop. Reload: Clear Targets." )
+	language.Add( "tool.multi_parent.left", "Select a prop (Shift to select all, Use to area select)" )
+	language.Add( "tool.multi_parent.right", "Parent all selected entities to prop" )
+	language.Add( "tool.multi_parent.reload", "Clear targets" )
 	language.Add( "tool.multi_parent.removeconstraints", "Remove Constraints" )
 	language.Add( "tool.multi_parent.nocollide", "No Collide" )
 	language.Add( "tool.multi_parent.weld", "Weld" )
