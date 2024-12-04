@@ -1,34 +1,15 @@
 TOOL.Category		= "Constraints"
-TOOL.Name			= "#tool.multi_parent.listname"
+TOOL.Name			= "#tool.multi_parent.name"
 TOOL.Command		= nil
 TOOL.ConfigName		= ""
 TOOL.Information	= {
 	{ name = "left" },
-	{ name = "right" },
+	{ name = "right_parent", stage = 0 },
+	{ name = "right_unparent", stage = 1 },
 	{ name = "reload" },
+	{ name = "reload_unparenting", stage = 0, icon2 = "gui/info" },
+	{ name = "reload_parenting", stage = 1, icon2 = "gui/info" },
 }
-
-if CLIENT then
-	language.Add( "tool.multi_parent.name", "Multi-Parent Tool" )
-	language.Add( "tool.multi_parent.listname", "Multi-Parent" )
-	language.Add( "tool.multi_parent.desc", "Parent multiple props to one prop." )
-	language.Add( "tool.multi_parent.left", "Select a prop (Shift to select all, Use to area select)" )
-	language.Add( "tool.multi_parent.right", "Parent all selected entities to prop" )
-	language.Add( "tool.multi_parent.reload", "Clear targets" )
-	language.Add( "tool.multi_parent.removeconstraints", "Remove Constraints" )
-	language.Add( "tool.multi_parent.nocollide", "No Collide" )
-	language.Add( "tool.multi_parent.weld", "Weld" )
-	language.Add( "tool.multi_parent.disablecollisions", "Disable Collisions" )
-	language.Add( "tool.multi_parent.weight", "Set weight" )
-	language.Add( "tool.multi_parent.disableshadow", "Disable Shadows" )
-	language.Add( "tool.multi_parent.removeconstraints.help", "Remove all constraints before parenting (cannot be undone!)." )
-	language.Add( "tool.multi_parent.nocollide.help", "Checking this creates a no collide constraint between the entity and parent. Unchecking will save on constraints (read: lag) but you will have to area-copy to duplicate your contraption." )
-	language.Add( "tool.multi_parent.weld.help", "Checking this creates a weld between the entity and parent. This will retain the physics on parented props and you will still be able to physgun them, but it will cause more lag (not recommended)." )
-	language.Add( "tool.multi_parent.disablecollisions.help", "Disable all collisions before parenting. Useful for props that are purely for visual effect." )
-	language.Add( "tool.multi_parent.weight.help", "Checking this will set the entity's weight to 0.1 before parenting. Useful for props that are purely for visual effect." )
-	language.Add( "tool.multi_parent.disableshadow.help", "Disables shadows for parented entities." )
-	language.Add( "Undone_Multi-Parent", "Undone Multi-Parent" )
-end
 
 TOOL.ClientConVar[ "removeconstraints" ] = "0"
 TOOL.ClientConVar[ "nocollide" ] = "0"
@@ -39,7 +20,7 @@ TOOL.ClientConVar[ "radius" ] = "512"
 TOOL.ClientConVar[ "disableshadow" ] = "0"
 
 function TOOL.BuildCPanel( panel )
-	panel:AddControl("Slider", {
+	panel:AddControl( "Slider", {
 		Label = "Auto Select Radius:",
 		Type = "integer",
 		Min = "64",
@@ -78,7 +59,7 @@ function TOOL.BuildCPanel( panel )
 	} )
 end
 
-TOOL.enttbl = {}
+TOOL.entTbl = {}
 
 function TOOL:IsPropOwner( ply, ent )
 	if CPPI then
@@ -92,31 +73,40 @@ function TOOL:IsPropOwner( ply, ent )
 			end
 		end
 	end
+
 	return false
 end
 
 function TOOL:IsSelected( ent )
 	local eid = ent:EntIndex()
-	return self.enttbl[eid] ~= nil
+
+	return self.entTbl[eid] ~= nil
 end
+
+local defaultColor = Color( 0, 0, 0, 0 )
+local parentColor = Color( 0, 255, 0, 100 )
+local unparentColor = Color( 255, 0, 0, 100 )
 
 function TOOL:Select( ent )
 	local eid = ent:EntIndex()
+
 	if not self:IsSelected( ent ) then -- Select
-		local col = Color(0, 0, 0, 0)
-		col = ent:GetColor()
-		self.enttbl[eid] = col
-		ent:SetColor( Color(0, 255, 0, 100) )
+		local oldColor = ent:GetColor() or defaultColor
+		local newColor = self:GetStage() == 0 and parentColor or unparentColor
+
+		self.entTbl[eid] = oldColor
+		ent:SetColor( newColor )
 		ent:SetRenderMode( RENDERMODE_TRANSALPHA )
 	end
 end
 
 function TOOL:Deselect( ent )
 	local eid = ent:EntIndex()
+
 	if self:IsSelected( ent ) then -- Deselect
-		local col = self.enttbl[eid]
+		local col = self.entTbl[eid]
 		ent:SetColor( col )
-		self.enttbl[eid] = nil
+		self.entTbl[eid] = nil
 	end
 end
 
@@ -125,23 +115,26 @@ function TOOL:ParentCheck( child, parent )
 		if child == parent then
 			return false
 		end
+
 		parent = parent:GetParent()
 	end
+
 	return true
 end
 
 function TOOL:LeftClick( trace )
-	if CLIENT then return true end
-	if trace.Entity:IsValid() and trace.Entity:IsPlayer() then return end
-	if SERVER and not util.IsValidPhysicsObject( trace.Entity, trace.PhysicsBone ) then return false end
-
-	local ply = self:GetOwner()
-
-	if (not ply:KeyDown( IN_USE )) and trace.Entity:IsWorld() then return false end
-
 	local ent = trace.Entity
 
-	if ply:KeyDown( IN_USE ) then -- Area select function
+	if ent:IsValid() and ent:IsPlayer() then return end
+	if SERVER and not util.IsValidPhysicsObject( ent, trace.PhysicsBone ) then return false end
+
+	local ply = self:GetOwner()
+	local inUse = ply:KeyDown( IN_USE )
+
+	if not inUse and ent:IsWorld() then return false end
+	if CLIENT then return true end
+
+	if inUse then -- Area select function
 		local SelectedProps = 0
 		local Radius = math.Clamp( self:GetClientNumber( "radius" ), 64, 1024 )
 
@@ -171,12 +164,63 @@ function TOOL:LeftClick( trace )
 	return true
 end
 
+local function unparentTargets( entTbl )
+	if CLIENT then return end
+
+	for k, v in pairs( entTbl ) do
+		local prop = Entity( k )
+
+		if IsValid( prop ) then
+			local phys = prop:GetPhysicsObject()
+
+			if IsValid( phys ) then
+				if IsValid( prop:GetParent() ) then -- Don't unparent if ent is not parented
+
+					-- Save some stuff because we want ent values not physobj values
+					local pos = prop:GetPos()
+					local ang = prop:GetAngles()
+					local mat = prop:GetMaterial()
+					local mass = phys:GetMass()
+
+					-- Unparent
+					phys:EnableMotion( false )
+					prop:SetParent( nil )
+
+					-- Restore values
+					phys:SetMass( mass )
+					prop:SetMaterial( mat )
+					prop:SetAngles( ang )
+					prop:SetPos( pos )
+				end
+
+				-- Deselect ent
+				prop:SetColor( v )
+				entTbl[k] = nil
+			end
+		end
+	end
+
+	entTbl = {}
+end
+
 function TOOL:RightClick( trace )
+	local entTbl = self.entTbl
+
+	if SERVER and table.Count( entTbl ) < 1 then return false end
+
+	-- Unparenting mode behavior
+	if self:GetStage() == 1 then
+		unparentTargets( entTbl )
+
+		return true
+	end
+
+	local ent = trace.Entity
+
+	if ent:IsValid() and ent:IsPlayer() then return false end
+	if SERVER and not util.IsValidPhysicsObject( ent, trace.PhysicsBone ) then return false end
+	if ent:IsWorld() then return false end
 	if CLIENT then return true end
-	if table.Count( self.enttbl ) < 1 then return end
-	if trace.Entity:IsValid() and trace.Entity:IsPlayer() then return end
-	if SERVER and not util.IsValidPhysicsObject( trace.Entity, trace.PhysicsBone ) then return false end
-	if trace.Entity:IsWorld() then return false end
 
 	local _nocollide = tobool( self:GetClientNumber( "nocollide" ) )
 	local _disablecollisions = tobool( self:GetClientNumber( "disablecollisions" ) )
@@ -185,15 +229,16 @@ function TOOL:RightClick( trace )
 	local _weight = tobool( self:GetClientNumber( "weight" ) )
 	local _disableshadow = tobool( self:GetClientNumber( "disableshadow" ) )
 
-	local ent = trace.Entity
-
 	local undo_tbl = {}
 
 	undo.Create( "Multi-Parent" )
-	for k, v in pairs( self.enttbl ) do
+
+	for k, v in pairs( entTbl ) do
 		local prop = Entity( k )
+
 		if IsValid( prop ) and self:ParentCheck( prop, ent ) then
 			local phys = prop:GetPhysicsObject()
+
 			if IsValid( phys ) then
 				local data = {}
 
@@ -232,7 +277,7 @@ function TOOL:RightClick( trace )
 				-- Restore original color and parent
 				prop:SetColor( v )
 				prop:SetParent( ent )
-				self.enttbl[k] = nil
+				entTbl[k] = nil
 
 				-- Undo shit
 				undo_tbl[prop] = data
@@ -240,15 +285,17 @@ function TOOL:RightClick( trace )
 		else
 			-- Not going to parent, just deselect it
 			if IsValid( prop ) then prop:SetColor( v ) end
-			self.enttbl[k] = nil
+
+			entTbl[k] = nil
 		end
 	end
 
 	-- Unparenting function for undo
-	undo.AddFunction( function( _, undo_tbl )
+	undo.AddFunction( function()
 		for prop, data in pairs( undo_tbl ) do
 			if IsValid( prop ) then
 				local phys = prop:GetPhysicsObject()
+
 				if IsValid( phys ) then
 					-- Save some stuff because we want ent values not physobj values
 					local pos = prop:GetPos()
@@ -269,35 +316,62 @@ function TOOL:RightClick( trace )
 					if data.Mass then
 						phys:SetMass( data.Mass )
 					end
+
 					if data.ColGroup then
 						prop:SetCollisionGroup( data.ColGroup )
 					end
+
 					if data.DisabledShadow then
 						prop:DrawShadow( true )
 					end
-
 				end
 			end
 		end
 	end, undo_tbl )
+
 	undo.SetPlayer( self:GetOwner() )
 	undo.Finish()
 
-	self.enttbl = {}
+	self.entTbl = {}
+
 	return true
 end
 
 function TOOL:Reload()
-	if CLIENT then return false end
-	if table.Count( self.enttbl ) < 1 then return end
+	local curStage = self:GetStage()
+	local entTbl = self.entTbl
 
-	for k,v in pairs( self.enttbl ) do
+	-- Change to the other tool mode
+	if self:GetOwner():KeyDown( IN_SPEED ) then
+		self:SetStage( curStage == 0 and 1 or 0 )
+
+		local newColor = curStage == 0 and unparentColor or parentColor
+
+		-- Update colors of selected targets to match the new tool mode
+		for k in pairs( entTbl ) do
+			local prop = ents.GetByIndex( k )
+
+			if prop:IsValid() then
+				prop:SetColor( newColor )
+			end
+		end
+
+		return false
+	end
+
+	if CLIENT then return true end
+	if table.Count( entTbl ) < 1 then return false end
+
+	for k, v in pairs( entTbl ) do
 		local prop = ents.GetByIndex( k )
+
 		if prop:IsValid() then
 			prop:SetColor( v )
-			self.enttbl[k] = nil
+			entTbl[k] = nil
 		end
 	end
-	self.enttbl = {}
+
+	self.entTbl = {}
+
 	return true
 end
