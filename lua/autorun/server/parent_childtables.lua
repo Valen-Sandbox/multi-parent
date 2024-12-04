@@ -3,8 +3,6 @@
 -- which returns a table of all props that are parented to it.
 ----------------------------------------------------------------------------
 
-if CLIENT then return end
-
 local meta = FindMetaTable( "Entity" )
 
 if not meta.SetParentEngine then meta.SetParentEngine = meta.SetParent end
