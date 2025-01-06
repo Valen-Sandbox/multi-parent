@@ -19,6 +19,36 @@ TOOL.ClientConVar[ "weight" ] = "0"
 TOOL.ClientConVar[ "radius" ] = "512"
 TOOL.ClientConVar[ "disableshadow" ] = "0"
 
+-- Language strings copied here to avoid having to send the file to clients
+-- TODO: Remove this section and only use localization files if this ever gets uploaded to the Workshop
+if CLIENT then
+	language.Add("tool.multi_parent.name", "Multi-Parent")
+	language.Add("tool.multi_parent.desc", "Parent multiple props to one prop.")
+
+	language.Add("tool.multi_parent.left", "Select a prop (Shift to select all, Use to area select)")
+	language.Add("tool.multi_parent.right_parent", "Parent all selected entities to prop")
+	language.Add("tool.multi_parent.right_unparent", "Unparent all selected entities")
+	language.Add("tool.multi_parent.reload", "Clear targets")
+	language.Add("tool.multi_parent.reload_unparenting", "Hold Shift to switch to unparenting mode")
+	language.Add("tool.multi_parent.reload_parenting", "Hold Shift to switch to parenting mode")
+
+	language.Add("tool.multi_parent.removeconstraints", "Remove Constraints")
+	language.Add("tool.multi_parent.nocollide", "No Collide")
+	language.Add("tool.multi_parent.weld", "Weld")
+	language.Add("tool.multi_parent.disablecollisions", "Disable Collisions")
+	language.Add("tool.multi_parent.weight", "Set weight")
+	language.Add("tool.multi_parent.disableshadow", "Disable Shadows")
+
+	language.Add("tool.multi_parent.removeconstraints.help", "Remove all constraints before parenting. This cannot be undone!")
+	language.Add("tool.multi_parent.nocollide.help", "Checking this creates a no collide constraint between the entity and parent. Unchecking will save on constraints (read: lag) but you will have to area-copy to duplicate your contraption.")
+	language.Add("tool.multi_parent.weld.help", "Checking this creates a weld between the entity and parent. This will retain the physics on parented props and you will still be able to physgun them, but it will cause more lag (not recommended).")
+	language.Add("tool.multi_parent.disablecollisions.help", "Disable all collisions before parenting. Useful for props that are purely for visual effect.")
+	language.Add("tool.multi_parent.weight.help", "Checking this will set the entity's weight to 0.1 before parenting. Useful for props that are purely for visual effect.")
+	language.Add("tool.multi_parent.disableshadow.help", "Disables shadows for parented entities.")
+
+	language.Add("Undone_Multi-Parent", "Undone Multi-Parent")
+end
+
 function TOOL.BuildCPanel( panel )
 	panel:AddControl( "Slider", {
 		Label = "Auto Select Radius:",
