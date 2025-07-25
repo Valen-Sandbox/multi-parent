@@ -32,11 +32,12 @@ if CLIENT then
 	language.Add("tool.multi_parent.reload_unparenting", "Hold Shift to switch to unparenting mode")
 	language.Add("tool.multi_parent.reload_parenting", "Hold Shift to switch to parenting mode")
 
+	language.Add("tool.multi_parent.autoselectradius", "Auto Select Radius:")
 	language.Add("tool.multi_parent.removeconstraints", "Remove Constraints")
 	language.Add("tool.multi_parent.nocollide", "No Collide")
 	language.Add("tool.multi_parent.weld", "Weld")
 	language.Add("tool.multi_parent.disablecollisions", "Disable Collisions")
-	language.Add("tool.multi_parent.weight", "Set weight")
+	language.Add("tool.multi_parent.weight", "Set Weight")
 	language.Add("tool.multi_parent.disableshadow", "Disable Shadows")
 
 	language.Add("tool.multi_parent.removeconstraints.help", "Remove all constraints before parenting. This cannot be undone!")
@@ -51,7 +52,7 @@ end
 
 function TOOL.BuildCPanel( panel )
 	panel:AddControl( "Slider", {
-		Label = "Auto Select Radius:",
+		Label = "#tool.multi_parent.autoselectradius",
 		Type = "integer",
 		Min = "64",
 		Max = "1024",
@@ -205,7 +206,6 @@ local function unparentTargets( entTbl )
 
 			if IsValid( phys ) then
 				if IsValid( prop:GetParent() ) then -- Don't unparent if ent is not parented
-
 					-- Save some stuff because we want ent values not physobj values
 					local pos = prop:GetPos()
 					local ang = prop:GetAngles()
@@ -405,3 +405,34 @@ function TOOL:Reload()
 
 	return true
 end
+
+if SERVER then return end
+
+local parentFrameColor = ColorAlpha( parentColor, parentColor.a + 50 )
+local unparentFrameColor = ColorAlpha( unparentColor, unparentColor.a + 50 )
+local shouldRenderAreaSelect = false
+local curStage = 0
+local curRadius = 64
+
+function TOOL:Think()
+	local ply = self:GetOwner()
+	shouldRenderAreaSelect = ply:KeyDown( IN_USE )
+	if not shouldRenderAreaSelect then return end
+
+	curStage = self:GetStage()
+	curRadius = math.Clamp( self:GetClientNumber( "radius" ), 64, 1024 )
+end
+
+hook.Add( "PostDrawTranslucentRenderables", "MultiParent_RenderAreaSelect", function( bDrawingDepth, _, isDraw3DSkybox )
+	if not shouldRenderAreaSelect then return end
+	if bDrawingDepth or isDraw3DSkybox then return end
+
+	local pos = LocalPlayer():GetEyeTrace().HitPos
+	local sphereQuality = 20
+	local sphereColor = curStage == 0 and parentColor or unparentColor
+	local frameColor = curStage == 0 and parentFrameColor or unparentFrameColor
+
+	render.SetColorMaterial()
+	render.DrawSphere( pos, curRadius, sphereQuality, sphereQuality, sphereColor )
+	render.DrawWireframeSphere( pos, curRadius, sphereQuality, sphereQuality, frameColor, true )
+end )
