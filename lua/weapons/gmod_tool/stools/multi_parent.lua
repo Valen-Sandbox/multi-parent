@@ -6,9 +6,8 @@ TOOL.Information	= {
 	{ name = "left" },
 	{ name = "right_parent", stage = 0 },
 	{ name = "right_unparent", stage = 1 },
-	{ name = "reload" },
-	{ name = "reload_unparenting", stage = 0, icon2 = "gui/info" },
-	{ name = "reload_parenting", stage = 1, icon2 = "gui/info" },
+	{ name = "reload_unparenting", stage = 0 },
+	{ name = "reload_parenting", stage = 1 },
 }
 
 TOOL.ClientConVar[ "removeconstraints" ] = "0"
@@ -16,7 +15,7 @@ TOOL.ClientConVar[ "nocollide" ] = "0"
 TOOL.ClientConVar[ "disablecollisions" ] = "0"
 TOOL.ClientConVar[ "weld" ] = "0"
 TOOL.ClientConVar[ "weight" ] = "0"
-TOOL.ClientConVar[ "radius" ] = "512"
+TOOL.ClientConVar[ "radius" ] = "256"
 TOOL.ClientConVar[ "disableshadow" ] = "0"
 
 -- Language strings copied here to avoid having to send the file to clients
@@ -28,9 +27,8 @@ if CLIENT then
 	language.Add("tool.multi_parent.left", "Select a prop (Shift to select all, Use to area select)")
 	language.Add("tool.multi_parent.right_parent", "Parent all selected entities to prop")
 	language.Add("tool.multi_parent.right_unparent", "Unparent all selected entities")
-	language.Add("tool.multi_parent.reload", "Clear targets")
-	language.Add("tool.multi_parent.reload_unparenting", "Hold Shift to switch to unparenting mode")
-	language.Add("tool.multi_parent.reload_parenting", "Hold Shift to switch to parenting mode")
+	language.Add("tool.multi_parent.reload_unparenting", "Clear targets (Shift to switch to unparenting mode)")
+	language.Add("tool.multi_parent.reload_parenting", "Clear targets (Shift to switch to parenting mode)")
 
 	language.Add("tool.multi_parent.autoselectradius", "Auto Select Radius:")
 	language.Add("tool.multi_parent.removeconstraints", "Remove Constraints")
@@ -48,6 +46,7 @@ if CLIENT then
 	language.Add("tool.multi_parent.disableshadow.help", "Disables shadows for parented entities.")
 
 	language.Add("Undone_Multi-Parent", "Undone Multi-Parent")
+	language.Add("tool.multi_parent.notify", "Multi-Parent: %s entities were selected.")
 end
 
 function TOOL.BuildCPanel( panel )
@@ -153,6 +152,12 @@ function TOOL:ParentCheck( child, parent )
 	return true
 end
 
+local function sendNotification( selected, ply )
+	net.Start( "MultiParent_SendNotification" )
+		net.WriteUInt( selected, MAX_EDICT_BITS )
+	net.Send( ply )
+end
+
 function TOOL:LeftClick( trace )
 	local ent = trace.Entity
 
@@ -176,7 +181,7 @@ function TOOL:LeftClick( trace )
 			end
 		end
 
-		ply:PrintMessage( HUD_PRINTTALK, "Multi-Parent: " .. SelectedProps .. " props were selected." )
+		sendNotification( SelectedProps, ply )
 	elseif ply:KeyDown( IN_SPEED ) then -- Select all constrained entities
 		local SelectedProps = 0
 
@@ -185,7 +190,7 @@ function TOOL:LeftClick( trace )
 			SelectedProps = SelectedProps + 1
 		end
 
-		ply:PrintMessage( HUD_PRINTTALK, "Multi-Parent: " .. SelectedProps .. " props were selected." )
+		sendNotification( SelectedProps, ply )
 	elseif self:IsSelected( ent ) then -- Ent is already selected, deselect it
 		self:Deselect( ent )
 	else -- Select single entity
@@ -435,4 +440,11 @@ hook.Add( "PostDrawTranslucentRenderables", "MultiParent_RenderAreaSelect", func
 	render.SetColorMaterial()
 	render.DrawSphere( pos, curRadius, sphereQuality, sphereQuality, sphereColor )
 	render.DrawWireframeSphere( pos, curRadius, sphereQuality, sphereQuality, frameColor, true )
+end )
+
+net.Receive( "MultiParent_SendNotification", function()
+	local selected = net.ReadUInt( MAX_EDICT_BITS )
+	local notifyText = language.GetPhrase( "tool.multi_parent.notify" )
+
+	notification.AddLegacy( notifyText:format( selected ), NOTIFY_GENERIC, 5 )
 end )

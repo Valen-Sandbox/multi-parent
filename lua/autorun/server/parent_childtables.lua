@@ -3,6 +3,8 @@
 -- which returns a table of all props that are parented to it.
 ----------------------------------------------------------------------------
 
+util.AddNetworkString( "MultiParent_SendNotification" )
+
 local meta = FindMetaTable( "Entity" )
 
 if not meta.SetParentEngine then meta.SetParentEngine = meta.SetParent end
